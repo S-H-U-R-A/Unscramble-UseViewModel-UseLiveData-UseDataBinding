@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.android.unscramble.R
@@ -16,16 +17,13 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 * El código de toma de decisiones, como determinar la siguiente palabra desordenada y los cálculos de la puntuación y el recuento de palabras, deben estar en tu ViewModel.
 * */
 
-/**
- * Fragment where the game is played, contains the game logic.
- */
 class GameFragment : Fragment() {
 
-    // Binding object instance with access to the views in the game_fragment.xml layout
+    // VARIABLE DE VINCULACÓN DEL DISEÑO
     private lateinit var binding: GameFragmentBinding
 
-    //Se obtiene el viewModel  mediante delegados que pueden sobrevivir
-    //Al ciclo de vida como es = by viewModels
+    //SE OBTIENE LA REFERENCIA AL VIEWMODEL MEDIANTE DELEGADOS
+    //PORQUE ESTOS DELEGADOS PUEDEN SOBREVIVIR AL CICLO DE VIDA
     private val viewModel: GameViewModel by viewModels<GameViewModel>()
 
     override fun onCreateView(
@@ -33,109 +31,108 @@ class GameFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Inflate the layout XML file and return a binding object instance
-        binding = GameFragmentBinding.inflate(inflater, container, false)
+        //SE INFLA Y SE HACE MATCH CON VIEWBINDING
+        //binding = GameFragmentBinding.inflate(inflater, container, false)
+
+        //INFLADO CON DATABINDING
+        binding = DataBindingUtil.inflate(inflater, R.layout.game_fragment, container, false)
 
         Log.d("GameFragment", "GameFragment created/re-created!")
 
-        Log.d("GameFragment", "Word: ${viewModel.currentScrambledWord} " +
-                "Score: ${viewModel.score} WordCount: ${viewModel.currentWordCount}")
+        Log.d(
+            "GameFragment", "Word: ${viewModel.currentScrambledWord} " +
+                    "Score: ${viewModel.score} WordCount: ${viewModel.currentWordCount}"
+        )
 
+        //SE RETORNA LA VIEW COMO LO SOLICITA EL mÉTODO
         return binding.root
-    }
-
-    override fun onDetach() {
-        super.onDetach()
-
-        Log.d("GameFragment", "GameFragment destroyed!")
-
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Setup a click listener for the Submit and Skip buttons.
+        //SE CREAN LOS LISTENER A LOS BOTONES DE AVANZAR Y ENVIAR
         binding.submit.setOnClickListener { onSubmitWord() }
         binding.skip.setOnClickListener { onSkipWord() }
 
 
-        // Update the UI
-        updateNextWordOnScreen()
-        binding.score.text = getString(R.string.score, 0)
-        binding.wordCount.text = getString(R.string.word_count, 0, MAX_NO_OF_WORDS)
+        //SE ACTUALIZA LA UI, OBSERVANDO LA VARIABLES LIVEDATA DEL VIEWMODEL
+        viewModel.currentScrambledWord.observe(viewLifecycleOwner){ newWord ->
+            binding.textViewUnscrambledWord.text = newWord
+        }
+
+        viewModel.score.observe( viewLifecycleOwner ){ newScore ->
+            binding.score.text =
+                getString(R.string.score, newScore)
+        }
+
+        viewModel.currentWordCount.observe( viewLifecycleOwner ){ newWordCount ->
+            binding.wordCount.text =
+                getString(R.string.word_count, newWordCount, MAX_NO_OF_WORDS)
+        }
+
     }
 
-    /*
-    * Checks the user's word, and updates the score accordingly.
-    * Displays the next scrambled word.
-    */
+    //SE RECUPERA LA PALABRA DEL USUARIO, SE VALIDA EN EL VIEWMODEL QUE SEA CORRECTA
+    //ADEMAS DE VALIDA EN EL VIEWMODEL SI PUEDE SEGUIR JUGANDO O YA LLEGO AL LIMITE DE PALABRAS
     private fun onSubmitWord() {
-        //Palabra escrita por el usuario
+        //PALABRA ESCRITA POR EL USUARIO
         val playerWord = binding.textInputEditText.text.toString()
 
-        //Si la palabra es correcta
-        if( viewModel.isUserWordCorrect(playerWord) ){
-            //No existe error
+        //SI LA PALABRA ES CORRECTA
+        if (viewModel.isUserWordCorrect(playerWord)) {
+            //NO SE MUESTRA EL ERROR
             setErrorTextField(false)
-
             //Se valida si se debe mostrar otra palabra o termino el juego
-            if ( viewModel.nextWord() ){
-                updateNextWordOnScreen()
-            }else {
+            if (!viewModel.nextWord()) {
                 showFinalScoreDialog()
             }
-
-        }else {
+        } else {
             setErrorTextField(true)
         }
 
     }
 
-    /*
-     * Skips the current word without changing the score.
-     * Increases the word count.
-     */
+    //SE VALIDA EN EL VIEWMODEL SI SE PUEDE SEGUIR JUGANDO O YA LLEGO AL LIMITE DE PALABRAS
     private fun onSkipWord() {
 
-        //Si hay más palabras mostramos la siguiente
-        if( viewModel.nextWord() ){
+        //SI PODEMOS SEGUIR JUGANDO, EL VIEWMODEL GENERA LA SIGUIENTE PALABRA
+        if (viewModel.nextWord()) {
             setErrorTextField(false)
-            updateNextWordOnScreen()
-        }else{
+        } else {
             //De lo contrario mostramos el resultado final
             showFinalScoreDialog()
         }
     }
 
-    /*
-     * Gets a random word for the list of words and shuffles the letters in it.
-     */
-    private fun getNextScrambledWord(): String {
-        val tempWord = allWordsList.random().toCharArray()
-        tempWord.shuffle()
-        return String(tempWord)
+    //SI LLEGO AL LIMITE DE PALABRAS PARA JUGAR, SE MUESTRA UNA ALERTA CON EL PUNTAJE
+    //Y OPCIONES DE SALIR O JUGAR DE NUEVO
+    private fun showFinalScoreDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(resources.getString(R.string.congratulations))
+            .setMessage(getString(R.string.you_scored, viewModel.score.value))
+            .setCancelable(false)
+            .setNegativeButton(getString(R.string.exit)) { _, _ ->
+                exitGame()
+            }
+            .setPositiveButton(getString(R.string.play_again)) { _, _ ->
+                restartGame()
+            }
+            .show()
     }
 
-    /*
-     * Re-initializes the data in the ViewModel and updates the views with the new data, to
-     * restart the game.
-     */
+   //MÉTODO QUE REINICIA LOS VALORES DE SCORE Y CONTADOR DE PALABRAS, USANDO EL VIEWMODEL
     private fun restartGame() {
         viewModel.reinitializeData()
         setErrorTextField(false)
-        updateNextWordOnScreen()
     }
 
-    /*
-     * Exits the game.
-     */
+    //MÉTODO QUE FINALIZA LA ACTIVIDAD Y POR ENDE SALIMOS DE LA APP
     private fun exitGame() {
         activity?.finish()
     }
 
-    /*
-    * Sets and resets the text field error status.
-    */
+    //SE EVALUA EL BOOLEAN PASADO PARA DETERMINAR SI SE MUESTRA UN ERROR EN EL TEXT INPUT LAYOUT
     private fun setErrorTextField(error: Boolean) {
         if (error) {
             binding.textField.isErrorEnabled = true
@@ -146,25 +143,11 @@ class GameFragment : Fragment() {
         }
     }
 
-    /*
-     * Displays the next scrambled word on screen.
-     */
-    private fun updateNextWordOnScreen() {
-        binding.textViewUnscrambledWord.text = viewModel.currentScrambledWord
-    }
+    override fun onDetach() {
+        super.onDetach()
 
-    private fun showFinalScoreDialog(){
-        MaterialAlertDialogBuilder( requireContext() )
-            .setTitle( resources.getString(R.string.congratulations) )
-            .setMessage( getString(R.string.you_scored, viewModel.score) )
-            .setCancelable(false)
-            .setNegativeButton( getString(R.string.exit) ){ _, _ ->
-                exitGame()
-            }
-            .setPositiveButton( getString(R.string.play_again) ){ _, _ ->
-                restartGame()
-            }
-            .show()
+        Log.d("GameFragment", "GameFragment destroyed!")
+
     }
 
 }

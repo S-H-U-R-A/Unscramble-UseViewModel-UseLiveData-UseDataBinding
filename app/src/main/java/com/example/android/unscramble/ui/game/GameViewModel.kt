@@ -1,28 +1,40 @@
 package com.example.android.unscramble.ui.game
 
 import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
 class GameViewModel : ViewModel() {
 
-    private var _score = 0
-    val score: Int
+    //PRIPIEDADES MUTABLES OBSERVABLES PARA ACTUALIZAR LA UI
+    private val _score: MutableLiveData<Int> = MutableLiveData(0)
+    val score: LiveData<Int>
         get() = _score
 
-    private var _currentWordCount = 0
-    val currentWordCount: Int
+    private val _currentWordCount: MutableLiveData<Int> = MutableLiveData(0)
+    val currentWordCount: LiveData<Int>
         get() = _currentWordCount
 
-    private lateinit var _currentScrambledWord: String
-    val currentScrambledWord: String
+    private val _currentScrambledWord: MutableLiveData<String> = MutableLiveData()
+    val currentScrambledWord: LiveData<String>
         get() = _currentScrambledWord
 
-    //Lista de palabras usadas en el Juego
+    //LISTA DE PALABRAS USADAS EN CADA JUEGO
     private var wordsList: MutableList<String> = mutableListOf()
 
-    //Palabra actual
+    //PALABRA ACTUAL OBTENIDA DEL ARREGLO DE PALABRAS
     private lateinit var currentWord: String
 
+    //INICICALIZAMOS LA PRIMER PALABRA
+    init {
+        Log.d("GameFragment", "GameViewModel created!")
+        //Para que no aparezca por defecto Test la primera vez el mismo viewmodel
+        //obtiene la palabra
+        getNextWord()
+    }
+
+    //OBTENER PROXIMA PALABRA
     private fun getNextWord() {
 
         //Se obtiene la palabra
@@ -41,28 +53,17 @@ class GameViewModel : ViewModel() {
         if (wordsList.contains(currentWord)) {
             getNextWord()
         } else {
-            _currentScrambledWord = String(tempWord)
-            ++_currentWordCount
+            _currentScrambledWord.value = String(tempWord)
+            _currentWordCount.value = _currentWordCount.value?.inc()
             wordsList.add( currentWord )
         }
 
     }
 
-    init {
-        Log.d("GameFragment", "GameViewModel created!")
-        //Para que no aparezca por defecto Test la primera vez el mismo viewmodel
-        //obtiene la palabra
-        getNextWord()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        Log.d("GameFragment", "GameViewModel destroyed!")
-    }
-
+    //VALIDA SI PODEMOS OBTENER OTRA PALABRA
     fun nextWord(): Boolean {
         //Valida si ya superamos el máximo de palabras permitidas para un juego
-        return  if (currentWordCount < MAX_NO_OF_WORDS){
+        return  if (currentWordCount.value!! < MAX_NO_OF_WORDS){
             getNextWord()
             true
         } else {
@@ -70,6 +71,7 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    //VERIFICA SI LA PALABRA DIGITADA POR EL USUARIO ES CORRECTA
     fun isUserWordCorrect(playerWord: String) : Boolean {
         return  if ( playerWord.equals(currentWord, true) ){
             increaseScore()
@@ -79,16 +81,24 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    //INCREMENTA LA PUNTUACIÓN
     private fun increaseScore(){
-        _score += SCORE_INCREASE
+        _score.value = _score.value?.plus( SCORE_INCREASE )
     }
 
+    //REINICIA LOS VALORES
     fun reinitializeData(){
-        _score = 0
-        _currentWordCount = 0
+        _score.value = 0
+        _currentWordCount.value = 0
         wordsList.clear()
 
         getNextWord()
+    }
+
+    //PRUEBA DE CICLO DE VIDA
+    override fun onCleared() {
+        super.onCleared()
+        Log.d("GameFragment", "GameViewModel destroyed!")
     }
 
 }
