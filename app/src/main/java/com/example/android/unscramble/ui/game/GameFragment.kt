@@ -37,13 +37,6 @@ class GameFragment : Fragment() {
         //INFLADO CON DATABINDING
         binding = DataBindingUtil.inflate(inflater, R.layout.game_fragment, container, false)
 
-        Log.d("GameFragment", "GameFragment created/re-created!")
-
-        Log.d(
-            "GameFragment", "Word: ${viewModel.currentScrambledWord} " +
-                    "Score: ${viewModel.score} WordCount: ${viewModel.currentWordCount}"
-        )
-
         //SE RETORNA LA VIEW COMO LO SOLICITA EL mÉTODO
         return binding.root
     }
@@ -51,25 +44,34 @@ class GameFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        //SE INICIALIZAN LAS VARIABLES DECLARADAS EN EL DISEÑO XML
+        binding.gameViewModel = viewModel
+        binding.maxNoOfWords  = MAX_NO_OF_WORDS
+        //SE LE DEBE INDICAR AL BINDING, CUAL VA A SER EL DUEÑO DEL CICLO DE VIDA AL CUAL SE DEBE AMARRAR
+        binding.lifecycleOwner = viewLifecycleOwner
+
         //SE CREAN LOS LISTENER A LOS BOTONES DE AVANZAR Y ENVIAR
         binding.submit.setOnClickListener { onSubmitWord() }
         binding.skip.setOnClickListener { onSkipWord() }
 
-
         //SE ACTUALIZA LA UI, OBSERVANDO LA VARIABLES LIVEDATA DEL VIEWMODEL
-        viewModel.currentScrambledWord.observe(viewLifecycleOwner){ newWord ->
-            binding.textViewUnscrambledWord.text = newWord
-        }
 
-        viewModel.score.observe( viewLifecycleOwner ){ newScore ->
+        //COMO SE IMPLEMENTO DATABINDING ACA YA NO ES NECESARIO OBSERVAR LOS VALORES
+        //DEBIDO A QUE SE ACTUALIZAN DIRECTAMENTE EN EL XML
+
+        /*viewModel.currentScrambledWord.observe(viewLifecycleOwner){ newWord ->
+            binding.textViewUnscrambledWord.text = newWord
+        }*/
+
+        /*viewModel.score.observe( viewLifecycleOwner ){ newScore ->
             binding.score.text =
                 getString(R.string.score, newScore)
-        }
+        }*/
 
-        viewModel.currentWordCount.observe( viewLifecycleOwner ){ newWordCount ->
+        /*viewModel.currentWordCount.observe( viewLifecycleOwner ){ newWordCount ->
             binding.wordCount.text =
                 getString(R.string.word_count, newWordCount, MAX_NO_OF_WORDS)
-        }
+        }*/
 
     }
 
@@ -141,13 +143,6 @@ class GameFragment : Fragment() {
             binding.textField.isErrorEnabled = false
             binding.textInputEditText.text = null
         }
-    }
-
-    override fun onDetach() {
-        super.onDetach()
-
-        Log.d("GameFragment", "GameFragment destroyed!")
-
     }
 
 }

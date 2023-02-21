@@ -28,7 +28,6 @@ class GameViewModel : ViewModel() {
 
     //INICICALIZAMOS LA PRIMER PALABRA
     init {
-        Log.d("GameFragment", "GameViewModel created!")
         //Para que no aparezca por defecto Test la primera vez el mismo viewmodel
         //obtiene la palabra
         getNextWord()
